@@ -286,29 +286,83 @@ def main():
         rng.shuffle(all_strengths)
         strengths = all_strengths[:2]
             
+        # --- Combinatorial CFG Generation ---
+        import hashlib
+        import random
+        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
+        rng = random.Random(h)
+        
+        strength_list = ', '.join(strengths) if strengths else 'solid technical foundations'
+        
+        intros = [
+            f"Brings {yoe:.1f} years of engineering experience",
+            f"Offering a solid {yoe:.1f}-year track record",
+            f"A strong fit with {yoe:.1f} years in the industry",
+            f"Presenting {yoe:.1f} years of deep technical experience",
+            f"With {yoe:.1f} years of highly relevant experience",
+            f"Demonstrates a {yoe:.1f}-year engineering background"
+        ]
+        
+        comp_base = f"{company}" if company != 'their current role' else "their current role"
+        comp_prev = f" (previously {past_comps[0]})" if past_comps else ""
+        
+        companies = [
+            f"currently at {comp_base}{comp_prev}",
+            f"working at {comp_base}{comp_prev}",
+            f"with a strong background at {comp_base}{comp_prev}",
+            f"based out of {comp_base}{comp_prev}",
+            f"most recently at {comp_base}{comp_prev}",
+            f"bringing experience from {comp_base}{comp_prev}"
+        ]
+        
+        skill_phrases = [
+            f"leveraging {', '.join(rel_skills[:3])}",
+            f"proficient in {', '.join(rel_skills[:3])}",
+            f"specializing in {', '.join(rel_skills[:3])}",
+            f"with deep expertise in {', '.join(rel_skills[:3])}",
+            f"utilizing {', '.join(rel_skills[:3])}",
+            f"applying {', '.join(rel_skills[:3])} in production"
+        ] if rel_skills else ["with solid technical foundations"]
+        
+        strength_phrases = [
+            f"Shows {strength_list}",
+            f"This candidate brings {strength_list}",
+            f"Their profile highlights {strength_list}",
+            f"Key strengths include {strength_list}",
+            f"They stand out due to their {strength_list}",
+            f"Notable advantages are their {strength_list}"
+        ]
+        
         notice = row.get('notice_period_days', 90)
         avail_str = f"available in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
         
         loc = profile.get('location', '')
         loc_str = "within preferred JD locations" if row.get('location_match', 0) else f"based in {loc}" if loc else "open to relocation"
-
-        import hashlib
-        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
-        t_idx = h % 4
         
-        strength_list = ', '.join(strengths) if strengths else 'solid technical foundations'
+        closing_phrases = [
+            f"and is {avail_str} {loc_str}.",
+            f"while being {avail_str} {loc_str}.",
+            f"and they are {avail_str} {loc_str}.",
+            f"and ready to start {avail_str.replace('available ', '')} {loc_str}.",
+            f"and can join {avail_str.replace('available ', '')} {loc_str}."
+        ]
         
-        if t_idx == 0:
-            res = f"Brings {yoe:.1f} years of engineering experience {comp_str}{skill_str}. Shows {strength_list}, and is {avail_str} {loc_str}."
-        elif t_idx == 1:
-            res = f"A strong fit with {yoe:.1f} years {comp_str}. This candidate brings {strength_list}{skill_str}, and is {avail_str} {loc_str}."
-        elif t_idx == 2:
-            s_part = f", bringing {strength_list}" if strengths else ""
-            comp_mod = comp_str.replace('at ', 'working at ')
-            res = f"Currently {comp_mod}, offering {yoe:.1f} years of experience{skill_str}. They are {avail_str} {loc_str}{s_part}."
-        else:
-            res = f"Offering {yoe:.1f} years of experience {comp_str}, this engineer is {avail_str} {loc_str}. Technical profile includes {strength_list}{skill_str}."
-            
+        intro = rng.choice(intros)
+        comp = rng.choice(companies)
+        skill = rng.choice(skill_phrases)
+        strength = rng.choice(strength_phrases)
+        closing = rng.choice(closing_phrases)
+        
+        structures = [
+            f"{intro} {comp}, {skill}. {strength} {closing}",
+            f"{strength}. {intro} {comp}, {skill} {closing}",
+            f"Currently {comp}, this engineer is {intro.lower()} {skill}. {strength} {closing}",
+            f"{intro} {comp}. {strength}, {skill} {closing}"
+        ]
+        
+        res = rng.choice(structures)
+        res = res[0].upper() + res[1:]
+        
         return res.replace(" ,", ",").replace("  ", " ").strip()
         
     top_100["reasoning"] = top_100.apply(generate_reasoning, axis=1)
