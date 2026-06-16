@@ -1,0 +1,6 @@
+data/
+top_100_candidates*.json
+jd.txt
+[PUB] India_runs_data_and_ai_challenge/
+__pycache__/
+*.pyc
