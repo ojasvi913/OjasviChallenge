@@ -1,6 +1,3 @@
-# Intelligent Candidate Discovery & Ranking Submission
-Team Antigravity
-
 ## Overview
 Our pipeline processes 100K+ raw candidate resumes into a highly targeted top-100 ranking optimized for production retrieval, rigorous evaluation methodologies, and strong software engineering fundamentals. 
 
