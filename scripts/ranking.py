@@ -286,82 +286,73 @@ def main():
         rng.shuffle(all_strengths)
         strengths = all_strengths[:2]
             
-        # --- Combinatorial CFG Generation ---
+        # --- Clean Combinatorial CFG Generation ---
         import hashlib
         import random
         h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
         rng = random.Random(h)
         
         strength_list = ', '.join(strengths) if strengths else 'solid technical foundations'
-        
-        intros = [
-            f"Brings {yoe:.1f} years of engineering experience",
-            f"Offering a solid {yoe:.1f}-year track record",
-            f"A strong fit with {yoe:.1f} years in the industry",
-            f"Presenting {yoe:.1f} years of deep technical experience",
-            f"With {yoe:.1f} years of highly relevant experience",
-            f"Demonstrates a {yoe:.1f}-year engineering background"
-        ]
-        
         comp_base = f"{company}" if company != 'their current role' else "their current role"
         comp_prev = f" (previously {past_comps[0]})" if past_comps else ""
         
+        # 1. Company Phrases (prepositional)
         companies = [
-            f"currently at {comp_base}{comp_prev}",
+            f"at {comp_base}{comp_prev}",
             f"working at {comp_base}{comp_prev}",
-            f"with a strong background at {comp_base}{comp_prev}",
+            f"originating from {comp_base}{comp_prev}",
             f"based out of {comp_base}{comp_prev}",
-            f"most recently at {comp_base}{comp_prev}",
-            f"bringing experience from {comp_base}{comp_prev}"
+            f"most recently at {comp_base}{comp_prev}"
         ]
+        comp = rng.choice(companies)
         
+        # 2. Skill Phrases (adjective/participle phrases)
+        skills_str = ', '.join(rel_skills[:3]) if rel_skills else "core software engineering"
         skill_phrases = [
-            f"leveraging {', '.join(rel_skills[:3])}",
-            f"proficient in {', '.join(rel_skills[:3])}",
-            f"specializing in {', '.join(rel_skills[:3])}",
-            f"with deep expertise in {', '.join(rel_skills[:3])}",
-            f"utilizing {', '.join(rel_skills[:3])}",
-            f"applying {', '.join(rel_skills[:3])} in production"
-        ] if rel_skills else ["with solid technical foundations"]
-        
-        strength_phrases = [
-            f"Shows {strength_list}",
-            f"This candidate brings {strength_list}",
-            f"Their profile highlights {strength_list}",
-            f"Key strengths include {strength_list}",
-            f"They stand out due to their {strength_list}",
-            f"Notable advantages are their {strength_list}"
+            f"highly proficient in {skills_str}",
+            f"specialized in {skills_str}",
+            f"experienced with {skills_str}",
+            f"skilled in leveraging {skills_str}",
+            f"focused on {skills_str}"
         ]
+        skill = rng.choice(skill_phrases)
         
+        # 3. Sentence 1: YoE + Comp + Skill
+        s1_options = [
+            f"Bringing {yoe:.1f} years of experience {comp}, this candidate is {skill}.",
+            f"With a {yoe:.1f}-year track record {comp}, they are {skill}.",
+            f"This engineer offers {yoe:.1f} years of experience {comp}, and is {skill}.",
+            f"Currently {comp}, they possess {yoe:.1f} years of technical experience and are {skill}."
+        ]
+        s1 = rng.choice(s1_options)
+        
+        # 4. Strength Phrases (Noun phrases)
+        strength_phrases = [
+            f"key strengths including {strength_list}",
+            f"notable advantages like {strength_list}",
+            f"a strong profile highlighting {strength_list}",
+            f"standout qualities such as {strength_list}",
+            f"proven expertise in {strength_list}"
+        ]
+        strength = rng.choice(strength_phrases)
+        
+        # 5. Availability/Location
         notice = row.get('notice_period_days', 90)
-        avail_str = f"available in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
+        avail_str = f"in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
         
         loc = profile.get('location', '')
         loc_str = "within preferred JD locations" if row.get('location_match', 0) else f"based in {loc}" if loc else "open to relocation"
         
-        closing_phrases = [
-            f"and is {avail_str} {loc_str}.",
-            f"while being {avail_str} {loc_str}.",
-            f"and they are {avail_str} {loc_str}.",
-            f"and ready to start {avail_str.replace('available ', '')} {loc_str}.",
-            f"and can join {avail_str.replace('available ', '')} {loc_str}."
+        # 6. Sentence 2: Strength + Avail
+        s2_options = [
+            f"They offer {strength}, and are available {avail_str} {loc_str}.",
+            f"Featuring {strength}, the candidate can join {avail_str} {loc_str}.",
+            f"They combine {strength} with availability {avail_str} {loc_str}.",
+            f"In addition to {strength}, they are ready to start {avail_str} {loc_str}."
         ]
+        s2 = rng.choice(s2_options)
         
-        intro = rng.choice(intros)
-        comp = rng.choice(companies)
-        skill = rng.choice(skill_phrases)
-        strength = rng.choice(strength_phrases)
-        closing = rng.choice(closing_phrases)
-        
-        structures = [
-            f"{intro} {comp}, {skill}. {strength} {closing}",
-            f"{strength}. {intro} {comp}, {skill} {closing}",
-            f"Currently {comp}, this engineer is {intro.lower()} {skill}. {strength} {closing}",
-            f"{intro} {comp}. {strength}, {skill} {closing}"
-        ]
-        
-        res = rng.choice(structures)
-        res = res[0].upper() + res[1:]
+        res = f"{s1} {s2}"
         
         return res.replace(" ,", ",").replace("  ", " ").strip()
         
