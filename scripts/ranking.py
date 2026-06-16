@@ -223,98 +223,63 @@ def main():
     
     print("Generating reasoning strings...")
     def generate_reasoning(row):
-        parts = []
+        profile = row.get('profile', {}) or {}
+        yoe = row.get('years_of_experience', 0)
+        company = profile.get('current_company', 'their current role')
         
-        # 1. Core intro with company context
-        yoe = row['years_of_experience']
-        company = ""
-        profile = row.get('profile')
-        if isinstance(profile, dict):
-            company = profile.get('current_company', '')
+        career = row.get('career_history', [])
+        past_comps = []
+        if isinstance(career, list):
+            for role in career:
+                if isinstance(role, dict):
+                    c = role.get('company')
+                    if c and c.lower() != company.lower() and c not in past_comps:
+                        past_comps.append(c)
         
-        if company:
-            parts.append(f"{yoe:.1f} YoE, currently at {company}.")
-        else:
-            parts.append(f"{yoe:.1f} YoE candidate.")
+        comp_str = f"at {company}" if company != 'their current role' else "in their current role"
+        if past_comps:
+            comp_str += f" (previously {past_comps[0]})"
+            
+        skills = row.get('skills', [])
+        rel_skills = []
+        target_skills = {"python", "pytorch", "elasticsearch", "faiss", "tensorflow", "kubernetes", "search", "ranking", "machine learning", "nlp", "llms", "opensearch", "pinecone", "milvus"}
+        if isinstance(skills, list):
+            for s in skills:
+                if isinstance(s, dict) and s.get('name'):
+                    name = s['name']
+                    if name.lower() in target_skills:
+                        rel_skills.append(name)
+        if not rel_skills and isinstance(skills, list):
+            rel_skills = [s.get('name') for s in skills if isinstance(s, dict) and s.get('name')]
+            
+        skill_str = f", leveraging {', '.join(rel_skills[:3])}" if rel_skills else ""
         
-        # 2. Depth details — specific to what the JD asks for
-        prod = row['production_depth']
-        ret = row['retrieval_depth']
-        ev = row['evaluation_depth']
-        if prod > 3 and ret > 3:
-            parts.append("Has built and deployed production retrieval/ranking systems with evidence of scale.")
-        elif ret > 3:
-            parts.append("Strong evidence of search and retrieval system implementation.")
-        elif prod > 3:
-            parts.append("Demonstrated production ML engineering with deployment experience.")
-        else:
-            parts.append("Solid engineering foundations with relevant technical exposure.")
+        s1 = f"Brings {yoe:.1f} years of engineering experience {comp_str}{skill_str}."
+        
+        strengths = []
+        if row.get('retrieval_depth', 0) > 3:
+            strengths.append("deep production retrieval/ranking expertise")
+        elif row.get('production_depth', 0) > 3:
+            strengths.append("proven ML deployment scale")
             
-        if ev > 1:
-            parts.append("Shows hands-on evaluation experience (NDCG/MRR/A-B testing).")
+        if row.get('evaluation_depth', 0) > 0:
+            strengths.append("hands-on evaluation (NDCG/MRR)")
             
-        # 3. Company quality
-        pr = row['product_ratio']
-        cr = row['consulting_ratio']
-        if pr > 0.7:
-            parts.append("Predominantly product-company career.")
-        elif pr > 0.4:
-            parts.append("Mix of product and other company experience.")
-        elif cr > 0.8:
-            parts.append("Primarily consulting background — higher risk per JD.")
-            
-        # 4. Education (if noteworthy)
         edu_tier = row.get('education_tier_score', 0)
         if edu_tier >= 4:
-            # Try to get institution name
-            education = row.get('education')
-            if isinstance(education, list):
-                for edu in education:
-                    if isinstance(edu, dict) and edu.get('tier') == 'tier_1':
-                        inst = edu.get('institution', '')
-                        degree = edu.get('degree', '')
-                        if inst:
-                            parts.append(f"Tier-1 education ({degree} from {inst}).")
-                            break
+            strengths.append("Tier-1 education")
+            
+        strength_str = f"Shows {', '.join(strengths)}" if strengths else "Offers solid technical foundations"
         
-        # 5. Domain experience
-        if row.get('domain_bonus_flag', 0):
-            parts.append("Has relevant HR-tech or marketplace domain experience.")
-            
-        # 6. Platform engagement signals — specific and grammatically correct
-        platform_signals = []
-        if row['recruiter_response_rate'] > 0.8:
-            parts.append(f"Highly responsive to recruiters ({row['recruiter_response_rate']:.0%} response rate).")
-        oar = row.get('offer_acceptance_rate', -1)
-        if oar > 0.8:
-            parts.append(f"Strong offer acceptance track record ({oar:.0%}).")
-        if row.get('willing_to_relocate', 0):
-            platform_signals.append("open to relocation")
-        if row.get('open_to_work_flag', 0):
-            platform_signals.append("actively exploring opportunities")
-        if platform_signals:
-            parts.append(f"Currently {' and '.join(platform_signals)}.")
-            
-        # 7. Notice period (JD cares about this)
         notice = row.get('notice_period_days', 90)
-        if notice <= 30:
-            parts.append(f"Available within {notice} days — within buyout range.")
-        elif notice > 90:
-            parts.append(f"Note: {notice}-day notice period.")
-            
-        # 8. Location context
-        country_match = row.get('country_match', 1.0)
-        if country_match < 1.0:
-            loc = ""
-            if isinstance(profile, dict):
-                loc = profile.get('location', 'outside India')
-            parts.append(f"Based in {loc}; visa consideration needed.")
-        elif row.get('location_match', 0):
-            if isinstance(profile, dict):
-                loc = profile.get('location', '')
-                parts.append(f"Based in {loc} — preferred JD location.")
-            
-        return " ".join(parts)
+        avail_str = f"available in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
+        
+        loc = profile.get('location', '')
+        loc_str = "within preferred JD locations" if row.get('location_match', 0) else f"based in {loc}" if loc else "open to relocation"
+        
+        s2 = f"{strength_str}, and is {avail_str} {loc_str}."
+        
+        return f"{s1} {s2}".replace(" ,", ",").replace("  ", " ").strip()
         
     top_100["reasoning"] = top_100.apply(generate_reasoning, axis=1)
     
