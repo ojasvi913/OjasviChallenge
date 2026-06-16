@@ -11,4 +11,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run the full pipeline
-CMD ["sh", "-c", "python scripts/resumescore.py && python scripts/bm25_score.py && python scripts/feature_engineering.py && python scripts/ranking.py"]
+CMD ["sh", "-c", "python run_pipeline.py --candidates data/candidates.jsonl --out final_rankings.csv"]

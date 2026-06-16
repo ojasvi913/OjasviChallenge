@@ -1,5 +1,5 @@
 team_name: "Antigravity"
 contact_email: "team@antigravity.ai"
-sandbox_url: "https://github.com/your-username/redrob-challenge"
+sandbox_url: "https://github.com/ojasvi913/RedrobAIDataChallenge"
 ai_tools_used: true
 ai_tools_declaration: "I used an autonomous AI agent to assist in parsing the job description, rapidly prototyping feature extraction functions, tuning ranking weights via data distribution analysis, and generating the reasoning strings. All core logic and architecture decisions were heavily engineered and rigorously evaluated by me."

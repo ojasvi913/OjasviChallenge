@@ -16,13 +16,10 @@ The pipeline filters out "model-tweakers" and keyword-stuffers in favor of engin
 
 ## Reproducing the Ranking
 
-You can reproduce our entire ranking pipeline from the raw `candidates.jsonl` to the `final_rankings.csv` in less than 2 minutes using our single orchestrated command:
+As per Stage 3 requirements, you can reproduce our entire ranking pipeline from the raw `candidates.jsonl` to the `final_rankings.csv` in less than 2 minutes using our single orchestrated command:
 
 ```bash
-python scripts/resumescore.py --input data/candidates.jsonl
-python scripts/bm25_score.py
-python scripts/feature_engineering.py
-python scripts/ranking.py
+python run_pipeline.py --candidates data/candidates.jsonl --out final_rankings.csv
 ```
 
 ### Pipeline Stages
