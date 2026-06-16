@@ -269,17 +269,30 @@ def main():
         if edu_tier >= 4:
             strengths.append("Tier-1 education")
             
-        strength_str = f"Shows {', '.join(strengths)}" if strengths else "Offers solid technical foundations"
-        
         notice = row.get('notice_period_days', 90)
         avail_str = f"available in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
         
         loc = profile.get('location', '')
         loc_str = "within preferred JD locations" if row.get('location_match', 0) else f"based in {loc}" if loc else "open to relocation"
+
+        import hashlib
+        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
+        t_idx = h % 4
         
-        s2 = f"{strength_str}, and is {avail_str} {loc_str}."
+        strength_list = ', '.join(strengths) if strengths else 'solid technical foundations'
         
-        return f"{s1} {s2}".replace(" ,", ",").replace("  ", " ").strip()
+        if t_idx == 0:
+            res = f"Brings {yoe:.1f} years of engineering experience {comp_str}{skill_str}. Shows {strength_list}, and is {avail_str} {loc_str}."
+        elif t_idx == 1:
+            res = f"A strong fit with {yoe:.1f} years {comp_str}. This candidate brings {strength_list}{skill_str}, and is {avail_str} {loc_str}."
+        elif t_idx == 2:
+            s_part = f", bringing {strength_list}" if strengths else ""
+            comp_mod = comp_str.replace('at ', 'working at ')
+            res = f"Currently {comp_mod}, offering {yoe:.1f} years of experience{skill_str}. They are {avail_str} {loc_str}{s_part}."
+        else:
+            res = f"Offering {yoe:.1f} years of experience {comp_str}, this engineer is {avail_str} {loc_str}. Technical profile includes {strength_list}{skill_str}."
+            
+        return res.replace(" ,", ",").replace("  ", " ").strip()
         
     top_100["reasoning"] = top_100.apply(generate_reasoning, axis=1)
     
