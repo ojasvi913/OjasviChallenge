@@ -256,18 +256,35 @@ def main():
         
         s1 = f"Brings {yoe:.1f} years of engineering experience {comp_str}{skill_str}."
         
-        strengths = []
+        all_strengths = []
         if row.get('retrieval_depth', 0) > 3:
-            strengths.append("deep production retrieval/ranking expertise")
+            all_strengths.append("deep production retrieval/ranking expertise")
         elif row.get('production_depth', 0) > 3:
-            strengths.append("proven ML deployment scale")
+            all_strengths.append("proven ML deployment scale")
             
         if row.get('evaluation_depth', 0) > 0:
-            strengths.append("hands-on evaluation (NDCG/MRR)")
+            all_strengths.append("hands-on evaluation (NDCG/MRR)")
             
         edu_tier = row.get('education_tier_score', 0)
         if edu_tier >= 4:
-            strengths.append("Tier-1 education")
+            all_strengths.append("Tier-1 education")
+            
+        if row.get('recruiter_response_rate', 0) > 0.85:
+            all_strengths.append("excellent recruiter responsiveness")
+            
+        if row.get('domain_bonus_flag', 0) > 0:
+            all_strengths.append("relevant HR-tech/marketplace domain experience")
+            
+        if row.get('notice_period_days', 90) <= 15:
+            all_strengths.append("immediate availability")
+            
+        # Deterministically pick 2 strengths based on candidate ID
+        import hashlib
+        import random
+        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
+        rng = random.Random(h)
+        rng.shuffle(all_strengths)
+        strengths = all_strengths[:2]
             
         notice = row.get('notice_period_days', 90)
         avail_str = f"available in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
