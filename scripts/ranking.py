@@ -300,9 +300,7 @@ def main():
         companies = [
             f"at {comp_base}{comp_prev}",
             f"working at {comp_base}{comp_prev}",
-            f"originating from {comp_base}{comp_prev}",
-            f"based out of {comp_base}{comp_prev}",
-            f"most recently at {comp_base}{comp_prev}"
+            f"based out of {comp_base}{comp_prev}"
         ]
         comp = rng.choice(companies)
         
@@ -322,7 +320,7 @@ def main():
             f"Bringing {yoe:.1f} years of experience {comp}, this candidate is {skill}.",
             f"With a {yoe:.1f}-year track record {comp}, they are {skill}.",
             f"This engineer offers {yoe:.1f} years of experience {comp}, and is {skill}.",
-            f"Currently {comp}, they possess {yoe:.1f} years of technical experience and are {skill}."
+            f"Having spent {yoe:.1f} years {comp}, they are {skill}."
         ]
         s1 = rng.choice(s1_options)
         
