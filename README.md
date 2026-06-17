@@ -9,7 +9,13 @@ The pipeline filters out "model-tweakers" and keyword-stuffers in favor of engin
    ```bash
    pip install -r requirements.txt
    ```
-   *Note: Our pipeline uses standard data science libraries (pandas, scikit-learn, rank-bm25) and python-docx. No GPUs or external APIs are required.*
+   *Note: Our pipeline uses standard data science libraries (pandas, rank-bm25). No GPUs, neural embeddings, or external APIs are required.*
+   
+   To run via Docker (as per Section 10.5 of the Spec):
+   ```bash
+   docker build -t redrob-ranker .
+   docker run -v $(pwd)/data:/app/data redrob-ranker
+   ```
 
 2. **Data Prerequisites:**
    Ensure the competition data files are located in a `data/` directory relative to the repository root.
@@ -27,9 +33,9 @@ python run_pipeline.py --candidates data/candidates.jsonl --out final_rankings.c
 1. **`resumescore.py` (The Fast Filter):** 
    A fast streaming filter that discards ~85% of candidates based on hard constraints: < 4.0 Years of Experience, or failing to meet a minimum technical vocabulary threshold (meaning they lack basic engineering/data/ML keywords).
 2. **`bm25_score.py` (The Relevance Engine):** 
-   Parses the JD using `python-docx`, extracts critical search/ranking keywords, and runs an Okapi BM25 index over the remaining 15K candidates to extract the top 600 most semantically relevant profiles.
+   Runs an Okapi BM25 index over the remaining 15K candidates against hardcoded semantic queries targeting the JD to extract the top 600 most relevant profiles.
 3. **`feature_engineering.py` (The Depth Analyzer):** 
-   Extracts 30+ sophisticated features from the top 600 candidates. This includes:
+   Extracts 44 sophisticated features from the top 600 candidates. This includes:
    - **Depth Markers**: Counts of production/scale, evaluation (NDCG/MAP), and retrieval (FAISS/Pinecone) evidence.
    - **Company Ratios**: Distinguishes product company tenure from consulting.
    - **Honeypot Guards**: Validates chronological timelines and keyword stuffing.

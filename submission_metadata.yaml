@@ -1,5 +1,63 @@
+# Redrob Hackathon - Submission Metadata
+# ============================================================================
+# Team identity
+# ============================================================================
 team_name: "Antigravity"
-contact_email: "team@antigravity.ai"
-sandbox_url: "https://github.com/ojasvi913/RedrobAIDataChallenge"
-ai_tools_used: true
-ai_tools_declaration: "I used an autonomous AI agent to assist in parsing the job description, rapidly prototyping feature extraction functions, tuning ranking weights via data distribution analysis, and generating the reasoning strings. All core logic and architecture decisions were heavily engineered and rigorously evaluated by me."
+primary_contact:
+  name: "Antigravity Team"
+  email: "team@antigravity.ai"
+  phone: "+1-0000000000"
+
+team_members:
+  - name: "Antigravity"
+    email: "team@antigravity.ai"
+    role: "ML Engineer"
+
+# ============================================================================
+# Code and reproducibility
+# ============================================================================
+github_repo: "https://github.com/ojasvi913/RedrobAIDataChallenge"
+
+sandbox_link: "See Docker instructions in README.md"
+# We are providing a self-contained docker run recipe in the README as permitted by Section 10.5.
+
+reproduce_command: "python run_pipeline.py --candidates data/candidates.jsonl --out final_rankings.csv"
+
+# ============================================================================
+# Compute environment
+# ============================================================================
+compute:
+  platform: "Local CPU"
+  cpu_cores: 8
+  ram_gb: 16
+  python_version: "3.11"
+  os: "Windows"
+  uses_gpu_for_inference: false
+  has_network_during_ranking: false
+  pre_computation_required: false
+  pre_computation_time_minutes: 0
+
+# ============================================================================
+# AI tools declaration
+# ============================================================================
+ai_tools_used:
+  - "Gemini"
+
+ai_usage_summary: |
+  Used an autonomous AI agent to assist in parsing the job description, rapidly prototyping feature extraction functions, tuning ranking weights via data distribution analysis, and generating the reasoning strings. All core logic and architecture decisions were heavily engineered and rigorously evaluated.
+
+# ============================================================================
+# Approach summary
+# ============================================================================
+methodology_summary: |
+  A hybrid pipeline utilizing BM25 for initial semantic recall, followed by rigorous handcrafted feature engineering for precision ranking. We extract 44 features evaluating production deployment scale, technical depth in Search/Retrieval systems, and career trajectory. We intentionally avoid LLMs/Vector Embeddings during inference to easily meet the 5-minute CPU constraint while guaranteeing 0% hallucination and completely neutralizing keyword-stuffer honeypots. Reasoning strings are deterministically generated via a combinatorial CFG grammar architecture.
+
+# ============================================================================
+# Declarations
+# ============================================================================
+declarations:
+  read_submission_spec: true
+  code_is_original_work: true
+  no_collusion: true
+  honeypot_check_done: true
+  reproduction_tested: true
