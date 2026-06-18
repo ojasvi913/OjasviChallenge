@@ -648,6 +648,18 @@ def add_honeypot_features(df: pd.DataFrame) -> pd.DataFrame:
     result["buzzword_density"] = result.apply(
         _compute_buzzword_density, axis=1,
     )
+    # P0 Fix: Cross-check summary text stated years vs claimed YOE field
+    result["summary_yoe_mismatch"] = result.apply(
+        _check_summary_yoe_mismatch, axis=1,
+    )
+    # P0 Fix: Detect expert skill inflation (expert in many skills with 0 years_used)
+    result["expert_skill_inflation"] = result.apply(
+        _check_expert_skill_inflation, axis=1,
+    )
+    # P2 Fix: Flag candidates currently employed at consulting firms
+    result["currently_at_consulting"] = result.apply(
+        _check_currently_at_consulting, axis=1,
+    )
     return result
 
 
@@ -756,6 +768,87 @@ def _compute_buzzword_density(row: pd.Series) -> float:
         return 0.0
     buzzwords = _count_terms(text, BUZZWORD_TERMS)
     return round(buzzwords / total_words * 100, 3)
+
+
+_YOE_PATTERN = re.compile(r"(\d+(?:\.\d+)?)\s*(?:\+\s*)?years?\s+(?:of\s+)?(?:hands?-?on\s+)?(?:experience|building|in|across)", re.IGNORECASE)
+
+
+def _check_summary_yoe_mismatch(row: pd.Series) -> float:
+    """Detect mismatch between claimed YOE field and years stated in summary text.
+
+    Returns 0.0 (no mismatch) to 1.0 (severe mismatch).
+    Honeypot profiles often inflate the structured YOE field but write a
+    realistic number in their free-text summary.
+    """
+    claimed = _get_profile(row, "years_of_experience", 0)
+    if not isinstance(claimed, (int, float)) or claimed <= 0:
+        return 0.0
+
+    summary = _get_profile(row, "summary", "")
+    if not isinstance(summary, str) or not summary:
+        return 0.0
+
+    matches = _YOE_PATTERN.findall(summary)
+    if not matches:
+        return 0.0
+
+    # Take the largest number mentioned (most likely the total experience)
+    stated_years = max(float(m) for m in matches)
+
+    if stated_years <= 0:
+        return 0.0
+
+    # If claimed is more than 1.5x what's stated in summary, suspicious
+    ratio = claimed / stated_years
+    if ratio > 2.0:
+        return 1.0  # Severe: claims 2x+ what summary says
+    elif ratio > 1.5:
+        return round((ratio - 1.5) * 2.0, 3)  # Gradual: 1.5x-2.0x
+    return 0.0
+
+
+def _check_expert_skill_inflation(row: pd.Series) -> float:
+    """Detect candidates claiming 'expert' proficiency in many skills with 0 years_used.
+
+    Returns 0.0 (normal) to 1.0 (highly suspicious).
+    Honeypot pattern: expert in 10 skills with 0 years experience in each.
+    Note: years_used == -1 means 'not reported' (common in this dataset),
+    so we only flag when years_used is explicitly 0.
+    """
+    skills = row.get("skills")
+    if not isinstance(skills, list) or not skills:
+        return 0.0
+
+    expert_zero_count = 0
+    expert_count = 0
+    for skill in skills:
+        if not isinstance(skill, dict):
+            continue
+        prof = (skill.get("proficiency", "") or "").lower()
+        if prof == "expert":
+            expert_count += 1
+            years_used = skill.get("years_used", -1)
+            # Only count explicitly 0, not -1 (unknown/not reported)
+            if isinstance(years_used, (int, float)) and years_used == 0:
+                expert_zero_count += 1
+
+    if expert_count >= 8 and expert_zero_count >= 6:
+        return 1.0
+    if expert_count >= 5 and expert_zero_count >= 4:
+        return 0.5
+    return 0.0
+
+
+def _check_currently_at_consulting(row: pd.Series) -> int:
+    """1 if the candidate is currently employed at a consulting/services firm.
+
+    The JD explicitly disqualifies candidates whose *entire* career is at
+    consulting firms, and is cautious about those currently there.
+    """
+    company = _clean(_get_profile(row, "current_company", ""))
+    industry = _clean(_get_profile(row, "current_industry", ""))
+    label = _classify_company(company, industry)
+    return 1 if label == "consulting" else 0
 
 
 # ===================================================================

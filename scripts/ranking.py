@@ -92,7 +92,7 @@ def score_row(row: pd.Series) -> float:
     # YOE peaks at JD target (5-9 years)
     yoe = row.get("years_of_experience", 0)
     if 5 <= yoe <= 9:
-        score += 15.0
+        score += 30.0
     elif 3 <= yoe < 5:
         score += 5.0
     elif 9 < yoe <= 12:
@@ -143,23 +143,6 @@ def score_row(row: pd.Series) -> float:
     response_time = row.get("avg_response_time_hours", 100)
     score -= min(response_time / 200.0, 1.0) * 10.0
     
-    # Recency: mild decay based on days_since_last_active (0 to -20 pts)
-    days = row.get("days_since_last_active", 365)
-    score -= min(days / 365.0, 1.0) * 20.0
-    
-    # Notice period: non-linear penalty matching JD intent
-    # JD: "We'd love sub-30-day notice. We can buy out up to 30 days.
-    #      30+ day notice candidates are still in scope but the bar gets higher."
-    notice = row.get("notice_period_days", 90)
-    if notice <= 30:
-        score -= 0.0   # No penalty — ideal per JD
-    elif notice <= 60:
-        score -= 5.0   # Mild — "still in scope"
-    elif notice <= 90:
-        score -= 12.0  # Significant — "bar gets higher"
-    else:
-        score -= 18.0  # Heavy — well beyond buyout range
-    
     # Base score must be positive before multipliers
     score = max(score, 10.0)
     
@@ -173,6 +156,102 @@ def score_row(row: pd.Series) -> float:
         penalty_multiplier *= (1.0 - (p_val * max_penalty))
     
     score *= penalty_multiplier
+    
+    # 3.5. Logistical & Behavioral Hard Constraints (Multiplicative)
+    
+    # [P1 FIX] Notice period multiplier — softened for 90+ day notice
+    notice = row.get("notice_period_days", 90)
+    if notice <= 30:
+        score *= 1.0
+    elif notice <= 60:
+        score *= 0.85  # Was 0.8 — slightly softened
+    elif notice <= 90:
+        score *= 0.65  # Was 0.5 — significantly softened
+    else:
+        score *= 0.45  # Was 0.3 — softened to not obliterate strong candidates
+        
+    # Location and Relocation Multiplier
+    country_match = row.get("country_match", 0)
+    location_match = row.get("location_match", 0)
+    relocate = row.get("willing_to_relocate", 0)
+    
+    if country_match == 0:
+        if relocate == 0:
+            score *= 0.1  # Out of country, won't relocate -> unhirable
+        else:
+            score *= 0.6  # Out of country, willing -> visa risk
+    else:
+        if location_match == 0 and relocate == 0:
+            score *= 0.4  # Was 0.2 — softened; in India, may still relocate for right role
+        elif location_match == 1:
+            score *= 1.15  # Was 1.2 — slight location bonus, reduced to avoid over-weighting
+            
+    # Ghost Candidate Multiplier
+    days_active = row.get("days_since_last_active", 365)
+    rrr = row.get("recruiter_response_rate", 0.0)
+    open_to_work = row.get("open_to_work_flag", 0)
+    
+    if open_to_work == 0 and days_active > 90:
+        score *= 0.4
+        
+    # [P1 FIX] Recruiter response rate — softened from 0.4 to 0.6
+    if rrr < 0.25:
+        score *= 0.6  # Was 0.4 — technical fit matters more than response rate
+        
+    # [P1 FIX] External Validation — softened and broadened
+    # JD says "papers, talks, open-source" not just GitHub
+    github = row.get("github_activity_score", 0.0)
+    yoe = row.get("years_of_experience", 0.0)
+    endorsements = row.get("endorsements_received", 0)
+    if github <= 0.0 and endorsements <= 0 and yoe >= 5.0:
+        score *= 0.6  # Was 0.3 — softened; GitHub alone shouldn't be a death sentence
+    
+    # ===============================================================
+    # [P0 FIX] Core Technical Fit Gate — Retrieval + Evaluation
+    # The JD is crystal clear: the role owns "ranking, retrieval, and
+    # matching systems". Candidates with ZERO evidence of both are
+    # fundamentally unqualified regardless of behavioral signals.
+    # ===============================================================
+    ret_depth = row.get("retrieval_depth", 0)
+    eval_depth = row.get("evaluation_depth", 0)
+    
+    if ret_depth == 0 and eval_depth == 0:
+        score *= 0.25  # Severe: no evidence of core competency at all
+    elif ret_depth + eval_depth <= 1:
+        score *= 0.5   # Marginal: barely any evidence
+
+    # [P1 FIX] Retrieval depth scaling — continuous reward for deeper experience
+    # Candidates with ret_depth 3+ get full credit; below that, partial
+    ret_scale = min(ret_depth / 3.0, 1.0)
+    ret_scale = max(ret_scale, 0.4)  # Floor at 0.4 (don't double-penalize with gate above)
+    score *= ret_scale
+    
+    # ===============================================================
+    # [P0 FIX] Consulting Disqualifier — per JD explicit rules
+    # "People who have only worked at consulting firms ... in their
+    # entire career" is a disqualifier.
+    # ===============================================================
+    consulting_ratio = row.get("consulting_ratio", 0.0)
+    currently_consulting = row.get("currently_at_consulting", 0)
+    
+    if consulting_ratio >= 1.0:
+        # 100% consulting career = explicit JD disqualifier
+        score *= 0.05
+    elif currently_consulting == 1 and consulting_ratio > 0.5:
+        # Currently at consulting firm + majority consulting career
+        # JD says "If you're currently at one of these companies but
+        # have prior product-company experience, that's fine" — this
+        # catches those WITHOUT prior product experience
+        score *= 0.2
+    elif currently_consulting == 1:
+        # Currently at consulting but with some product experience
+        score *= 0.6
+    
+    # [P2 FIX] Currently-at-consulting + no ML title = extra penalty
+    if currently_consulting == 1:
+        title_score = row.get("current_title_score", 0)
+        if title_score < 4:  # Not ML/AI/Search title
+            score *= 0.5
     
     # 4. Honeypots / Consistency
     for hp in HONEYPOTS:
@@ -193,6 +272,20 @@ def score_row(row: pd.Series) -> float:
     rer = row.get("retrieval_evidence_ratio", 1.0)
     if all_ret > 2 and rer < 0.2:
         score *= 0.7  # 30% penalty for likely skill-stuffers
+
+    # [P0 FIX] Summary-vs-YOE mismatch honeypot detector
+    summary_mismatch = row.get("summary_yoe_mismatch", 0.0)
+    if summary_mismatch >= 1.0:
+        score *= 0.0  # Severe: claims 2x+ what summary says — completely disqualify
+    elif summary_mismatch > 0:
+        score *= max(0.1, 1.0 - summary_mismatch)  # Gradual penalty
+
+    # [P0 FIX] Expert skill inflation honeypot detector
+    skill_inflation = row.get("expert_skill_inflation", 0.0)
+    if skill_inflation >= 1.0:
+        score *= 0.0  # Severe: expert in 8+ skills with 0 years — completely disqualify
+    elif skill_inflation > 0:
+        score *= 0.3  # Moderate: expert in 5+ skills with 0 years
         
     return round(score, 4)
 
@@ -210,6 +303,14 @@ def main():
     print(f"Reading candidates from {args.input} ...")
     df = pd.read_json(args.input, lines=True)
     print(f"Loaded {len(df):,} candidates.")
+    
+    print("Normalizing BM25 scores to 0-100 scale...")
+    bm25_max = df["bm25_score"].max()
+    bm25_min = df["bm25_score"].min()
+    if bm25_max > bm25_min:
+        df["bm25_score"] = 100.0 * (df["bm25_score"] - bm25_min) / (bm25_max - bm25_min)
+    else:
+        df["bm25_score"] = 50.0
     
     print("Calculating final scores...")
     df["final_score"] = df.apply(score_row, axis=1)
