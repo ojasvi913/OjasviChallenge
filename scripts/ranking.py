@@ -327,6 +327,7 @@ def main():
         profile = row.get('profile', {}) or {}
         yoe = row.get('years_of_experience', 0)
         company = profile.get('current_company', 'their current role')
+        rank_pos = row.get('rank', 50)  # Default to 50 if missing
         
         career = row.get('career_history', [])
         past_comps = []
@@ -355,57 +356,86 @@ def main():
             
         skill_str = f", leveraging {', '.join(rel_skills[:3])}" if rel_skills else ""
         
-        s1 = f"Brings {yoe:.1f} years of engineering experience {comp_str}{skill_str}."
+        import hashlib
+        import random
+        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
+        rng = random.Random(h)
         
-        all_strengths = []
-        if row.get('retrieval_depth', 0) > 3:
-            all_strengths.append("deep production retrieval/ranking expertise")
-        elif row.get('production_depth', 0) > 3:
-            all_strengths.append("proven ML deployment scale")
+        # --- Extracted Points (text, base_magnitude, is_weakness) ---
+        points = []
+        
+        # Strengths
+        if row.get('retrieval_depth', 0) > 4:
+            points.append(("deep production retrieval/ranking expertise", 50, False))
+        elif row.get('retrieval_depth', 0) > 1:
+            points.append(("solid retrieval fundamentals", 30, False))
             
-        if row.get('evaluation_depth', 0) > 0:
-            all_strengths.append("hands-on evaluation (NDCG/MRR)")
+        if row.get('evaluation_depth', 0) > 1:
+            points.append(("hands-on evaluation experience (NDCG/MRR)", 45, False))
+        elif row.get('evaluation_depth', 0) > 0:
+            points.append(("basic search evaluation knowledge", 20, False))
             
-        edu_tier = row.get('education_tier_score', 0)
-        if edu_tier >= 4:
-            all_strengths.append("Tier-1 education")
-            
-        if row.get('recruiter_response_rate', 0) > 0.85:
-            all_strengths.append("excellent recruiter responsiveness")
+        if row.get('production_depth', 0) > 4:
+            points.append(("proven ML deployment scale", 35, False))
             
         if row.get('domain_bonus_flag', 0) > 0:
-            all_strengths.append("relevant HR-tech/marketplace domain experience")
+            points.append(("relevant HR-tech/marketplace domain experience", 30, False))
+            
+        if row.get('education_tier_score', 0) >= 4:
+            points.append(("Tier-1 education", 20, False))
             
         if row.get('notice_period_days', 90) <= 15:
-            all_strengths.append("immediate availability")
+            points.append(("immediate availability", 25, False))
             
-        # Deterministically pick 2 strengths based on candidate ID
-        import hashlib
-        import random
-        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
-        rng = random.Random(h)
-        rng.shuffle(all_strengths)
-        strengths = all_strengths[:2]
-            
-        # --- Clean Combinatorial CFG Generation ---
-        import hashlib
-        import random
-        h = int(hashlib.md5(row['candidate_id'].encode('utf-8')).hexdigest(), 16)
-        rng = random.Random(h)
+        if row.get('recruiter_response_rate', 0) > 0.85:
+            points.append(("excellent recruiter responsiveness", 15, False))
+
+        # Weaknesses
+        weakness_multiplier = rank_pos / 50.0  # Scales from ~0.02 (Rank 1) to 2.0 (Rank 100)
         
-        strength_list = ', '.join(strengths) if strengths else 'solid technical foundations'
+        if row.get('evaluation_depth', 0) == 0:
+            points.append(("lacks hands-on ranking evaluation metrics", 40 * weakness_multiplier, True))
+            
+        sig = row.get('redrob_signals', {})
+        if sig.get('github_activity_score', 0) == 0 and sig.get('endorsements_received', 0) == 0:
+            points.append(("zero external technical validation (GitHub/Endorsements)", 35 * weakness_multiplier, True))
+            
+        if row.get('wrapper_penalty', 0) > 0.2:
+            points.append(("relies heavily on API wrappers rather than core ML", 30 * weakness_multiplier, True))
+            
+        if row.get('consulting_ratio', 0) > 0.5:
+            points.append(("consulting-heavy career path", 25 * weakness_multiplier, True))
+            
+        if row.get('notice_period_days', 0) >= 90:
+            points.append(("a long 90+ day notice period", 20 * weakness_multiplier, True))
+            
+        if yoe < 5.0:
+            points.append(("is slightly under-experienced for the target level", 20 * weakness_multiplier, True))
+
+        # Sort by magnitude (highest absolute magnitude first)
+        points.sort(key=lambda x: x[1], reverse=True)
+        
+        # Take top 5
+        top_points = points[:5]
+        
+        # Separate into strengths and weaknesses
+        selected_strengths = [p[0] for p in top_points if not p[2]]
+        selected_weaknesses = [p[0] for p in top_points if p[2]]
+        
+        # --- CFG Generation ---
         comp_base = f"{company}" if company != 'their current role' else "their current role"
         comp_prev = f" (previously {past_comps[0]})" if past_comps else ""
         
-        # 1. Company Phrases (prepositional)
+        # 1. Company Phrases
         companies = [
             f"at {comp_base}{comp_prev}",
             f"working at {comp_base}{comp_prev}",
-            f"based out of {comp_base}{comp_prev}"
+            f"based out of {comp_base}{comp_prev}",
+            f"from {comp_base}{comp_prev}"
         ]
         comp = rng.choice(companies)
         
-        # 2. Skill Phrases (adjective/participle phrases)
+        # 2. Skill Phrases
         skills_str = ', '.join(rel_skills[:3]) if rel_skills else "core software engineering"
         skill_phrases = [
             f"highly proficient in {skills_str}",
@@ -421,38 +451,48 @@ def main():
             f"Bringing {yoe:.1f} years of experience {comp}, this candidate is {skill}.",
             f"With a {yoe:.1f}-year track record {comp}, they are {skill}.",
             f"This engineer offers {yoe:.1f} years of experience {comp}, and is {skill}.",
-            f"Having spent {yoe:.1f} years {comp}, they are {skill}."
+            f"Having spent {yoe:.1f} years {comp}, they are {skill}.",
+            f"A seasoned engineer with {yoe:.1f} years {comp}, their expertise centers on {skills_str}."
         ]
         s1 = rng.choice(s1_options)
         
-        # 4. Strength Phrases (Noun phrases)
-        strength_phrases = [
-            f"key strengths including {strength_list}",
-            f"notable advantages like {strength_list}",
-            f"a strong profile highlighting {strength_list}",
-            f"standout qualities such as {strength_list}",
-            f"proven expertise in {strength_list}"
-        ]
-        strength = rng.choice(strength_phrases)
-        
-        # 5. Availability/Location
-        notice = row.get('notice_period_days', 90)
-        avail_str = f"in {notice} days" if notice <= 30 else f"on a {notice}-day notice"
-        
-        loc = profile.get('location', '')
-        loc_str = "within preferred JD locations" if row.get('location_match', 0) else f"based in {loc}" if loc else "open to relocation"
-        
-        # 6. Sentence 2: Strength + Avail
-        s2_options = [
-            f"They offer {strength}, and are available {avail_str} {loc_str}.",
-            f"Featuring {strength}, the candidate can join {avail_str} {loc_str}.",
-            f"They combine {strength} with availability {avail_str} {loc_str}.",
-            f"In addition to {strength}, they are ready to start {avail_str} {loc_str}."
-        ]
-        s2 = rng.choice(s2_options)
-        
-        res = f"{s1} {s2}"
-        
+        # 4. Construct Sentence 2 (Strengths)
+        if selected_strengths:
+            strengths_str = ', '.join(selected_strengths)
+            s2_options = [
+                f"Notable strengths include {strengths_str}.",
+                f"Key advantages are {strengths_str}.",
+                f"The candidate's profile highlights {strengths_str}.",
+                f"They offer standout qualities such as {strengths_str}.",
+                f"Proven expertise in {strengths_str} makes them a strong fit."
+            ]
+            s2 = rng.choice(s2_options)
+        else:
+            s2 = "The candidate shows solid baseline technical foundations."
+            
+        # 5. Construct Sentence 3 (Weaknesses)
+        s3 = ""
+        if selected_weaknesses:
+            weaknesses_str = ', '.join(selected_weaknesses)
+            if len(selected_weaknesses) == 1:
+                s3_options = [
+                    f"However, the profile indicates the candidate {weaknesses_str}.",
+                    f"A point of concern is that they {weaknesses_str}.",
+                    f"It should be noted that the candidate {weaknesses_str}.",
+                    f"One minor drawback: they {weaknesses_str}.",
+                    f"On the downside, their background {weaknesses_str}."
+                ]
+            else:
+                s3_options = [
+                    f"However, critical gaps include: {weaknesses_str}.",
+                    f"Significant concerns exist: {weaknesses_str}.",
+                    f"Points of friction include that they {weaknesses_str}.",
+                    f"We must weigh these against notable gaps: {weaknesses_str}.",
+                    f"Conversely, the profile shows weaknesses in: {weaknesses_str}."
+                ]
+            s3 = rng.choice(s3_options)
+            
+        res = f"{s1} {s2} {s3}".strip()
         return res.replace(" ,", ",").replace("  ", " ").strip()
         
     top_100["reasoning"] = top_100.apply(generate_reasoning, axis=1)
