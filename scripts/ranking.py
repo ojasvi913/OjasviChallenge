@@ -390,27 +390,27 @@ def main():
         if row.get('recruiter_response_rate', 0) > 0.85:
             points.append(("excellent recruiter responsiveness", 15, False))
 
-        # Weaknesses
+        # Weaknesses (Mapped to pure noun phrases for flawless grammar)
         weakness_multiplier = rank_pos / 50.0  # Scales from ~0.02 (Rank 1) to 2.0 (Rank 100)
         
         if row.get('evaluation_depth', 0) == 0:
-            points.append(("lacks hands-on ranking evaluation metrics", 40 * weakness_multiplier, True))
+            points.append(("a lack of hands-on ranking evaluation metrics", 40 * weakness_multiplier, True))
             
         sig = row.get('redrob_signals', {})
         if sig.get('github_activity_score', 0) == 0 and sig.get('endorsements_received', 0) == 0:
             points.append(("zero external technical validation (GitHub/Endorsements)", 35 * weakness_multiplier, True))
             
         if row.get('wrapper_penalty', 0) > 0.2:
-            points.append(("relies heavily on API wrappers rather than core ML", 30 * weakness_multiplier, True))
+            points.append(("heavy reliance on API wrappers rather than core ML", 30 * weakness_multiplier, True))
             
         if row.get('consulting_ratio', 0) > 0.5:
-            points.append(("consulting-heavy career path", 25 * weakness_multiplier, True))
+            points.append(("a consulting-heavy career path", 25 * weakness_multiplier, True))
             
         if row.get('notice_period_days', 0) >= 90:
             points.append(("a long 90+ day notice period", 20 * weakness_multiplier, True))
             
         if yoe < 5.0:
-            points.append(("is slightly under-experienced for the target level", 20 * weakness_multiplier, True))
+            points.append(("a slight lack of overall experience for the target level", 20 * weakness_multiplier, True))
 
         # Sort by magnitude (highest absolute magnitude first)
         points.sort(key=lambda x: x[1], reverse=True)
@@ -476,17 +476,17 @@ def main():
             weaknesses_str = ', '.join(selected_weaknesses)
             if len(selected_weaknesses) == 1:
                 s3_options = [
-                    f"However, the profile indicates the candidate {weaknesses_str}.",
-                    f"A point of concern is that they {weaknesses_str}.",
-                    f"It should be noted that the candidate {weaknesses_str}.",
-                    f"One minor drawback: they {weaknesses_str}.",
-                    f"On the downside, their background {weaknesses_str}."
+                    f"However, the profile indicates {weaknesses_str}.",
+                    f"A point of concern is {weaknesses_str}.",
+                    f"It should be noted that the candidate has {weaknesses_str}.",
+                    f"One minor drawback: {weaknesses_str}.",
+                    f"On the downside, their background features {weaknesses_str}."
                 ]
             else:
                 s3_options = [
                     f"However, critical gaps include: {weaknesses_str}.",
-                    f"Significant concerns exist: {weaknesses_str}.",
-                    f"Points of friction include that they {weaknesses_str}.",
+                    f"Significant concerns exist, namely {weaknesses_str}.",
+                    f"Points of friction include {weaknesses_str}.",
                     f"We must weigh these against notable gaps: {weaknesses_str}.",
                     f"Conversely, the profile shows weaknesses in: {weaknesses_str}."
                 ]
