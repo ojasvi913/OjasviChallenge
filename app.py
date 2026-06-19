@@ -14,6 +14,21 @@ def run_pipeline(input_file):
     # Use the uploaded file path
     input_path = input_file.name
 
+    # If the user uploads a regular JSON array instead of JSONL, auto-convert it
+    if input_path.endswith(".json"):
+        import json
+        try:
+            with open(input_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                new_path = input_path + "l"
+                with open(new_path, "w", encoding="utf-8") as f:
+                    for item in data:
+                        f.write(json.dumps(item) + "\n")
+                input_path = new_path
+        except Exception as e:
+            pass # Fallback to original behavior if parsing fails
+
     # Run the pipeline script
     command = ["python", "run_pipeline.py", "--candidates", input_path, "--out", output_csv]
     
