@@ -505,7 +505,7 @@ def main():
     out_df = top_100.rename(columns={"final_score": "score"})
     out_df = out_df[["candidate_id", "rank", "score", "reasoning"]]
     
-    out_df.to_csv(args.output, index=False, encoding="utf-8")
+    out_df.to_csv(args.output, index=False, encoding="utf-8", lineterminator='\n')
     print("Done!")
     
     print("\nValidating submission...")
