@@ -18,7 +18,7 @@ team_members:
 # ============================================================================
 github_repo: "https://github.com/ojasvi913/RedrobAIDataChallenge"
 
-sandbox_link: "YOUR_HUGGINGFACE_SPACE_URL_HERE"
+sandbox_link: "https://huggingface.co/spaces/Cyrotex/RedrobChallengeCyrotex"
 # We have provided a Gradio UI hosted on Hugging Face Spaces. We also have a Docker run recipe in README as permitted by Section 10.5.
 
 reproduce_command: "python run_pipeline.py --candidates data/candidates.jsonl --out final_rankings.csv"
