@@ -1,3 +1,13 @@
+---
+title: Redrob AI Data Challenge
+emoji: 🏆
+colorFrom: blue
+colorTo: indigo
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
 ## Overview
 Our pipeline processes 100K+ raw candidate resumes into a highly targeted top-100 ranking optimized for production retrieval, rigorous evaluation methodologies, and strong software engineering fundamentals. 
 
