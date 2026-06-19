@@ -2,24 +2,24 @@
 # ============================================================================
 # Team identity
 # ============================================================================
-team_name: "Antigravity"
+team_name: "Cyrotex"
 primary_contact:
-  name: "Antigravity Team"
-  email: "team@antigravity.ai"
-  phone: "+1-0000000000"
+  name: "Ojasvi Tomar"
+  email: "ojasvi91329@gmail.com"
+  phone: "9818387329"
 
 team_members:
-  - name: "Antigravity"
-    email: "team@antigravity.ai"
-    role: "ML Engineer"
+  - name: "Ojasvi Tomar"
+    email: "ojasvi91329@gmail.com"
+    role: "Sole member"
 
 # ============================================================================
 # Code and reproducibility
 # ============================================================================
 github_repo: "https://github.com/ojasvi913/RedrobAIDataChallenge"
 
-sandbox_link: "See Docker instructions in README.md"
-# We are providing a self-contained docker run recipe in the README as permitted by Section 10.5.
+sandbox_link: "YOUR_HUGGINGFACE_SPACE_URL_HERE"
+# We have provided a Gradio UI hosted on Hugging Face Spaces. We also have a Docker run recipe in README as permitted by Section 10.5.
 
 reproduce_command: "python run_pipeline.py --candidates data/candidates.jsonl --out final_rankings.csv"
 
@@ -41,16 +41,16 @@ compute:
 # AI tools declaration
 # ============================================================================
 ai_tools_used:
-  - "Gemini"
+  - "Google Antigravity"
 
 ai_usage_summary: |
-  Used an autonomous AI agent to assist in parsing the job description, rapidly prototyping feature extraction functions, tuning ranking weights via data distribution analysis, and generating the reasoning strings. All core logic and architecture decisions were heavily engineered and rigorously evaluated.
+  Used an autonomous Google Antigravity to assist in extracting JD requirements, rapidly prototyping feature engineering functions, tuning ranking weights via data distribution analysis, and generating the reasoning strings. All core logic and architecture decisions were heavily engineered and rigorously evaluated.
 
 # ============================================================================
 # Approach summary
 # ============================================================================
 methodology_summary: |
-  A hybrid pipeline utilizing BM25 for initial semantic recall, followed by rigorous handcrafted feature engineering for precision ranking. We extract 44 features evaluating production deployment scale, technical depth in Search/Retrieval systems, and career trajectory. We intentionally avoid LLMs/Vector Embeddings during inference to easily meet the 5-minute CPU constraint while guaranteeing 0% hallucination and completely neutralizing keyword-stuffer honeypots. Reasoning strings are deterministically generated via a combinatorial CFG grammar architecture.
+  A hybrid pipeline utilizing BM25 for initial semantic recall, followed by rigorous handcrafted feature engineering for precision ranking. We extract 44 features evaluating production deployment scale, technical depth in Search/Retrieval systems, and career trajectory. We intentionally avoid LLMs/Vector Embeddings during inference to easily meet the 5-minute CPU constraint while guaranteeing 0% hallucination and avoiding keyword-stuffer honeypots. Reasoning strings are deterministically generated using a combinatorial CFG grammar architecture.
 
 # ============================================================================
 # Declarations
