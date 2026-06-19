@@ -320,7 +320,7 @@ def main():
     
     # Take top 100
     top_100 = df.head(100).copy()
-    top_100["rank"] = range(1, 101)
+    top_100["rank"] = range(1, len(top_100) + 1)
     
     print("Generating reasoning strings...")
     def generate_reasoning(row):
